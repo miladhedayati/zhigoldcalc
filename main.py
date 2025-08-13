@@ -1,39 +1,36 @@
-from flask import Flask, jsonify
+import os
 import requests
-from bs4 import BeautifulSoup
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-def get_gold_price():
-    url = "https://www.estjt.ir/"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
+BRSAPI_KEY = os.getenv("BRSAPI_KEY")  # کلید رو تو Render به عنوان متغیر محیطی بذار
+BASE_URL = "https://brsapi.ir/api/v1"
 
-    price_tag = soup.find('td', string='طلا ۱۸ عیار')
-    if price_tag:
-        price = price_tag.find_next('td').text.strip()
-        price = int(price.replace(',', '').replace(' تومان', '').replace('٬', ''))
-        return price
-    else:
-        return 7500000  # قیمت fallback اگر نتونست قیمت رو بگیره
+def get_live_gold_price():
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Authorization": f"Bearer {BRSAPI_KEY}"
+        }
+        # این آدرس نمونه است، طبق مستندات BrsApi مسیر دقیق رو جایگزین کن
+        url = f"{BASE_URL}/gold"
+        r = requests.get(url, headers=headers, timeout=8)
+        r.raise_for_status()
+        data = r.json()
+        return data  # داده خام رو برمی‌گردونیم
+    except Exception as e:
+        return {"error": str(e)}
 
-@app.route('/calculate/<float:weight>/<float:commission_percent>', methods=['GET'])
-def calculate(weight, commission_percent):
-    price_per_gram = get_gold_price()
-    base_price = weight * price_per_gram
-    commission_price = (commission_percent / 100) * base_price
-    total_price = base_price + commission_price
+@app.route("/gold")
+def gold_price():
+    price_data = get_live_gold_price()
+    return jsonify(price_data)
 
-    return jsonify({
-        'weight': weight,
-        'price_per_gram': price_per_gram,
-        'commission_percent': commission_percent,
-        'total_price': int(total_price)
-    })
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"})
 
-@app.route('/')
-def index():
-    return "Gold Price Calculator is Running!"
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
