@@ -4,28 +4,34 @@ from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-BRSAPI_KEY = os.getenv("BRSAPI_KEY")  # کلید رو تو Render به عنوان متغیر محیطی بذار
+# کلید رو از Environment Variable می‌گیریم
+BRSAPI_KEY = os.getenv("BRSAPI_KEY")
 BASE_URL = "https://brsapi.ir/api/v1"
 
 def get_live_gold_price():
+    """
+    گرفتن قیمت لحظه‌ای طلا از BrsApi
+    """
+    if not BRSAPI_KEY:
+        return {"error": "API key not set in environment variables."}
+
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
             "Authorization": f"Bearer {BRSAPI_KEY}"
         }
-        # این آدرس نمونه است، طبق مستندات BrsApi مسیر دقیق رو جایگزین کن
+        # مسیر دقیق باید با مستندات BrsApi هماهنگ بشه
         url = f"{BASE_URL}/gold"
         r = requests.get(url, headers=headers, timeout=8)
         r.raise_for_status()
         data = r.json()
-        return data  # داده خام رو برمی‌گردونیم
+        return data
     except Exception as e:
         return {"error": str(e)}
 
 @app.route("/gold")
 def gold_price():
-    price_data = get_live_gold_price()
-    return jsonify(price_data)
+    return jsonify(get_live_gold_price())
 
 @app.route("/health")
 def health():
