@@ -1,0 +1,11 @@
+{
+  "name": "zhigold/calc",
+  "description": "Gold price calculator bot",
+  "type": "project",
+  "require": {},
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  }
+}
